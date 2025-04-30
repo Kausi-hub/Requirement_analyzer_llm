@@ -1,0 +1,144 @@
+	🔧 System-Level Requirements: Motion Control Actuation for an Autonomous Vehicle	
+		
+	ID	Requirement Description
+		1. Functional Requirements
+	F.1	The motion control system shall receive trajectory commands (position, velocity, acceleration) from the path planning module.
+	F.2	The system shall convert trajectory commands into appropriate actuator commands for throttle, brake, and steering.
+	F.3	The system shall support closed-loop feedback control using vehicle state feedback (e.g., speed, steering angle).
+	F.4	The system shall be capable of executing emergency stop commands from the safety system.
+	F.5	The system shall log actuation commands and vehicle responses for diagnostic purposes.
+	F.6	The control system shall support multiple drive modes (e.g., normal, sport, eco, autonomous).
+		
+		2. Performance Requirements
+	P.1	The motion control system shall execute steering commands with a latency < 50 ms.
+	P.2	Throttle and brake commands shall be applied within 100 ms of command receipt.
+	P.3	Lateral deviation from the planned path shall not exceed ±0.2 meters under nominal conditions.
+	P.4	Longitudinal velocity error shall not exceed ±0.5 m/s under steady-state cruising.
+	P.5	The system shall maintain control authority up to 1.0 g of lateral acceleration and 0.8 g of deceleration.
+	P.6	The system shall operate reliably at vehicle speeds from 0 to 130 km/h.
+		
+		3. Safety and Fault Tolerance Requirements
+	S.1	The system shall comply with ISO 26262 ASIL-D safety requirements for actuation.
+	S.2	The system shall detect and isolate faults in actuator subsystems (e.g., steering actuator fault).
+	S.3	The system shall enter a predefined safe state (e.g., controlled stop) in the event of critical control failure.
+	S.4	The system shall support health monitoring of actuator feedback sensors (e.g., position encoders, pressure sensors).
+	S.5	The system shall provide redundancy for critical components (e.g., dual brake controllers, redundant CAN lines).
+	S.6	The system shall perform periodic self-tests on power-up and during operation.
+		
+		4. Interface Requirements
+	I.1	The system shall interface with the path planning module via a real-time Ethernet or CAN interface.
+	I.2	The control system shall send actuator commands over a deterministic communication channel with bounded jitter.
+	I.3	The system shall interface with sensors including IMU, wheel encoders, GPS, and steering angle sensors.
+	I.4	Diagnostic and calibration interfaces shall be accessible via secure OBD-II or Ethernet ports.
+		
+	5. Environmental & Reliability Requirements	
+		
+	ID	Requirement Description
+	E.1	The system shall operate in ambient temperatures between -40°C to +85°C.
+	E.2	The actuation system components shall be IP67 rated for water and dust ingress protection.
+	E.3	The system shall withstand vibrations up to 10 g and shocks up to 30 g.
+	E.4	MTBF (Mean Time Between Failures) of the motion control actuation system shall exceed 10,000 hours.
+		
+	6. Cybersecurity Requirements	
+		
+	ID	Requirement Description
+	C.1	All actuator command interfaces shall be protected against unauthorized access or tampering.
+	C.2	Communication channels shall support encryption and authentication as per ISO/SAE 21434.
+	C.3	The system shall support secure boot and over-the-air (OTA) firmware updates.
+⚙️ Technical Safety Requirements (TSRs)			
+			
+These are derived from the system safety concept and are typically allocated to hardware and software components.			
+			
+TSR ID	Requirement Description	ASIL	Rationale
+TSR.1	The system shall monitor actuator position and feedback values (e.g., steering angle, brake pressure) at ≥100 Hz.	C/D	Enables rapid detection of deviation/failure.
+TSR.2	The system shall compare commanded vs. actual actuator values and raise a fault if deviation > allowable threshold.	D	Detects performance degradation or failure.
+TSR.3	The system shall support a fallback actuation strategy (e.g., torque limiting, steering rate limiting) in the event of a partial fault.	C	Maintains partial functionality during degraded states.
+TSR.4	The actuation ECU shall implement a watchdog timer to detect CPU hang or task failure.	D	Ensures software execution integrity.
+TSR.5	The brake actuation system shall default to a mechanical fail-safe (e.g., spring-applied braking) if electronic control fails.	D	Guarantees stopping capability in full electrical failure.
+TSR.6	The system shall support dual-redundant power supply lines for safety-critical components.	D	Prevents single-point power loss from causing failure.
+TSR.7	Steering actuator shall use redundant position sensors with cross-check validation.	C	Prevents incorrect steering input due to sensor drift/failure.
+TSR.8	All safety-related faults shall be logged and timestamped for diagnostic analysis.	B	Aids in root cause analysis and validation.
+			
+🔐 Functional Safety Requirements (FSRs)			
+			
+These describe what the system must do to avoid unreasonable risk under operating conditions.			
+			
+FSR ID	Requirement Description	ASIL	Rationale
+FSR.1	The vehicle shall safely decelerate and stop within 4 seconds in case of total actuation control loss.	D	Critical for occupant and pedestrian safety.
+FSR.2	The actuation control system shall transition to a safe state (e.g., reduced speed or pull-over) if any safety-critical sensor is lost.	C/D	Prevents uncontrolled behavior.
+FSR.3	The system shall be capable of detecting, classifying, and responding to common actuator faults (e.g., stuck throttle, failed brake motor).	D	Ensures appropriate safety response.
+FSR.4	Redundant control logic shall be implemented to verify actuator command validity before execution.	C	Protects against software corruption or spoofing.
+FSR.5	The system shall support health checks on startup and periodically during operation.	B/C	Detects latent faults before they cause system failure.
+FSR.6	The system shall guarantee a deterministic maximum latency (e.g., 100 ms) from fault detection to actuation of the safe state.	D	Ensures timely mitigation.
+FSR.7	Emergency stop functionality shall override all commands and force vehicle halt regardless of state.	D	Protects against system runaway.
+
+		✅ Software Safety Requirements (SSRs)		
+				
+		Sensor Monitoring & Feedback Handling		
+	ID	Description	TSRs, FSRs	ASIL
+	SSR.1	The software shall acquire actuator feedback data (e.g., steering angle, brake pressure) at ≥100 Hz and make it available to the fault detection and control modules.	TSR1	C/D
+	SSR.2	The software shall cross-validate redundant position sensor data for steering and detect mismatches beyond a defined threshold.	TSR 7	C
+				
+		Command vs Actual Comparison & Fault Detection		
+	SSR.3	The software shall continuously compare commanded actuator values with actual feedback, and trigger a fault if deviation exceeds allowable tolerance.	TSR 2	D
+	SSR.4	The software shall detect, classify (e.g., stuck, drifting, unresponsive), and log actuator faults using predefined fault classes.	FSR 3	D
+				
+		Fallback and Degraded Mode Handling		
+	SSR.5	The software shall implement fallback strategies (e.g., torque limiting, rate limiting) upon detection of specific actuator faults.	TSR 3	C
+	SSR.6	If a safety-critical sensor fails, the software shall transition the actuation system to a predefined safe state (e.g., limited speed or lateral control only).	FSR 2	C/D
+	SSR.7	The software shall initiate a safe-state transition within 100 ms of detecting a fault requiring such action.	FSR 6	D
+				
+		Safety Watchdog & Redundancy		
+	SSR.8	The software shall interface with and periodically service a watchdog timer; a missed deadline shall be treated as a critical failure.	TSR 4	D
+	SSR 9	The software shall implement redundant logic (e.g., command voting, logic cross-checks) before executing actuator commands.	FSR 4	C
+				
+		Startup & Runtime Health Monitoring		
+	SSR.10	The software shall perform self-checks on all safety-critical modules and sensors at startup and periodically during runtime.	FSR 5	B/C
+	SSR.11	The software shall log all safety-related faults with timestamps and fault classification codes in a retrievable diagnostic log.	TSR 8	B
+				
+		Emergency & Fail-Safe Behavior		
+	SSR.12	Upon total actuation failure, the software shall command full brake actuation and/or engage mechanical fail-safes to ensure vehicle stops within 4 seconds.	FSR 1	D
+	SSR.13	The software shall ensure that an emergency stop command immediately overrides all ongoing commands and initiates a halt.	FSR 7	D
+				
+						
+	🚗 System Safety Concept (SSC) for Motion Control Actuation					
+						
+	🔹 1. Item Definition					
+	Item: Motion Control Actuation System					
+	Function: Execute lateral and longitudinal vehicle motion commands by actuating steering, braking, and throttle systems, based on high-level trajectory inputs.					
+	Operating Modes: Autonomous driving mode, manual mode, fallback mode					
+	Interfaces:					
+	Vehicle Control System (Trajectory Planner, Decision Layer)					
+	Sensors (IMU, wheel speed, steering angle sensors)					
+	Actuators (electric steering rack, brake-by-wire, throttle-by-wire)					
+						
+	🔹 2. Hazard Analysis and Risk Assessment (HARA)					
+	Hazard	Operational Situation	Severity (S)	Exposure (E)	Controllability (C)	ASIL
+	Unintended steering angle	Driving at highway speeds	S3	E4	C1	D
+	Loss of braking	Urban environment	S3	E4	C2	D
+	Unintended acceleration	Stop-and-go traffic	S3	E3	C1	D
+	Drift from planned path	Urban driving	S2	E4	C2	C
+	Degraded actuator performance (e.g., slow brake response)	Mountain descent	S3	E3	C2	D
+	Loss of actuator feedback	High-speed lane change	S2	E3	C3	C
+						
+	🔹 3. Safety Goals (SGs)					
+	SG ID	Safety Goal	ASIL			
+	SG.1	Prevent unintended steering or loss of steering authority.	D			
+	SG.2	Ensure safe braking under all operating conditions.	D			
+	SG.3	Prevent unintended acceleration and ensure predictable throttle response.	D			
+	SG.4	Detect and mitigate degraded actuator performance.	C			
+	SG.5	Maintain vehicle control during sensor loss or transient faults.	C			
+	SG.6	Ensure all actuators respond within defined latency thresholds.	D			
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
+						
