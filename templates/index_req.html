@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Requirement Consistency Checker</title>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    textarea, button, input { width: 100%; margin-top: 10px; }
+    #result { border: 1px solid #ccc; padding: 10px; margin-top: 20px; }
+    .spinner { display: none; }
+  </style>
+</head>
+<body>
+
+  <h1>Requirement Contradiction Analyzer</h1>
+
+  <p>Enter your requirements below, one per line. The AI will identify contradictions and suggest improvements.</p>
+
+  <textarea id="requirementsInput" rows="10" placeholder="Example:
+- The system must operate below 70°C.
+- The system should tolerate up to 90°C for 10 minutes.
+- The display must remain readable in all lighting conditions."></textarea>
+
+  <label for="thresholdInput">Satisfaction Threshold (0-1):</label>
+  <input type="number" id="thresholdInput" min="0" max="1" step="0.01" value="0.8">
+
+  <button id="analyzeBtn">Analyze Requirements</button>
+
+  <div class="spinner">🔄 Analyzing...</div>
+
+  <div id="result"></div>
+  <div id="downloadBtnContainer" style="margin-top: 20px;"></div>
+
+  <script>
+    $('#analyzeBtn').on('click', function () {
+      const rawText = $('#requirementsInput').val().trim();
+      const threshold = parseFloat($('#thresholdInput').val());
+      if (!rawText) return alert("Please enter some requirements.");
+
+      const requirements = rawText
+        .split('\n')
+        .map(line => line.trim())
+        .filter(line => line.length > 0);
+
+      $('.spinner').show();
+      $('#result').empty();
+      $('#downloadBtnContainer').empty();
+
+      $.ajax({
+        url: '/reason',
+        method: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({ requirements, threshold }),
+        success: function (data) {
+          $('.spinner').hide();
+          $('#result').html(data.log_content || '<pre>' + JSON.stringify(data, null, 2) + '</pre>');
+          if (data.log_file) {
+            const btn = '<a href="/download-log?file=' + encodeURIComponent(data.log_file) + '" target="_blank">📥 Download Analysis Log</a>';
+            $('#downloadBtnContainer').html(btn);
+          }
+          if (data.satisfactory) {
+            $('#result').prepend('<p style="color: green; font-weight: bold;">✅ The requirements meet the satisfaction threshold.</p>');
+          } else {
+            $('#result').prepend('<p style="color: red; font-weight: bold;">⚠️ The requirements do NOT meet the satisfaction threshold.</p>');
+          }
+        },
+        error: function (err) {
+          $('.spinner').hide();
+          $('#result').html('<b>Error:</b> ' + (err.responseJSON?.error || err.statusText));
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
